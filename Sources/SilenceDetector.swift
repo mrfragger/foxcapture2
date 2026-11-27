@@ -13,14 +13,26 @@ public final class SilenceDetector {
     public static let defaultThreshold: Float = 0.001
 
     public let threshold: Float
-    public let duration: TimeInterval
 
     private let lock = NSLock()
     private var lastSoundAt: TimeInterval = 0
+    private var silenceDuration: TimeInterval
 
-    public init(threshold: Float = SilenceDetector.defaultThreshold, duration: TimeInterval = 4) {
+    /// Seconds of silence after which `isSilent` turns true.
+    public var duration: TimeInterval {
+        lock.lock(); defer { lock.unlock() }
+        return silenceDuration
+    }
+
+    public init(threshold: Float = SilenceDetector.defaultThreshold, duration: TimeInterval = 5) {
         self.threshold = threshold
-        self.duration = duration
+        self.silenceDuration = duration
+    }
+
+    /// Changes the silence length (settings can change between recordings).
+    public func setDuration(_ duration: TimeInterval) {
+        lock.lock(); defer { lock.unlock() }
+        silenceDuration = duration
     }
 
     /// Starts (or restarts) the countdown: "sound" is considered to have just
@@ -40,6 +52,6 @@ public final class SilenceDetector {
     /// True once no sound has been heard for `duration` seconds or more.
     public func isSilent(at now: TimeInterval) -> Bool {
         lock.lock(); defer { lock.unlock() }
-        return now - lastSoundAt >= duration
+        return now - lastSoundAt >= silenceDuration
     }
 }

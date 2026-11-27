@@ -57,7 +57,9 @@ public struct ReencodeOptions: Equatable {
 
     /// The ffmpeg command line (without the executable). Progress is reported
     /// on stdout as key=value lines; everything else is quiet.
-    public func arguments(input: URL, output: URL) -> [String] {
+    /// `outputDuration`, when set, caps the output length (`-t`), which is
+    /// how the silent tail of an auto-stopped recording is trimmed.
+    public func arguments(input: URL, output: URL, outputDuration: TimeInterval? = nil) -> [String] {
         var args = [
             "-hide_banner", "-nostdin", "-loglevel", "error", "-y",
             "-i", input.path,
@@ -65,6 +67,10 @@ public struct ReencodeOptions: Equatable {
             // recordings without audio).
             "-map", "0:v:0", "-map", "0:a?"
         ]
+
+        if let outputDuration, outputDuration > 0 {
+            args += ["-t", String(format: "%.3f", outputDuration)]
+        }
 
         if let height = resolution.maxHeight {
             // Cap the height without ever upscaling; -2 keeps the aspect
@@ -177,6 +183,7 @@ public final class Reencoder {
     private let input: URL
     private let partial: URL
     private let options: ReencodeOptions
+    private let trimEnd: TimeInterval
     private let process = Process()
     private let lock = NSLock()
     private var cancelRequested = false
@@ -184,12 +191,22 @@ public final class Reencoder {
     private var parser = FFmpegProgressParser()
     private var errorTail = Data()
 
-    public init(ffmpeg: URL, input: URL, output: URL, options: ReencodeOptions) {
+    /// `trimEnd` seconds are cut from the end of the recording (0 = none).
+    public init(ffmpeg: URL, input: URL, output: URL, options: ReencodeOptions, trimEnd: TimeInterval = 0) {
         self.ffmpeg = ffmpeg
         self.input = input
         self.output = output
         self.partial = output.appendingPathExtension("part")
         self.options = options
+        self.trimEnd = trimEnd
+    }
+
+    /// Length of the output after trimming, or nil when nothing should be
+    /// trimmed (no trim requested, unknown length, or a clip too short to
+    /// lose that much).
+    public static func trimmedDuration(of duration: TimeInterval?, trimEnd: TimeInterval) -> TimeInterval? {
+        guard trimEnd > 0, let duration, duration - trimEnd >= 1 else { return nil }
+        return duration - trimEnd
     }
 
     /// "<name> (compressed).mp4" next to the original, numbered if taken.
@@ -214,8 +231,11 @@ public final class Reencoder {
     ) {
         let stdout = Pipe()
         let stderr = Pipe()
+        let trimmed = Self.trimmedDuration(of: duration, trimEnd: trimEnd)
+        // Progress is measured against what will actually be written.
+        let progressDuration = trimmed ?? duration
         process.executableURL = ffmpeg
-        process.arguments = options.arguments(input: input, output: partial)
+        process.arguments = options.arguments(input: input, output: partial, outputDuration: trimmed)
         process.standardInput = FileHandle.nullDevice
         process.standardOutput = stdout
         process.standardError = stderr
@@ -230,7 +250,7 @@ public final class Reencoder {
                 handle.readabilityHandler = nil
                 return
             }
-            self?.consumeProgress(data, duration: duration, onProgress: onProgress)
+            self?.consumeProgress(data, duration: progressDuration, onProgress: onProgress)
         }
         stderr.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData

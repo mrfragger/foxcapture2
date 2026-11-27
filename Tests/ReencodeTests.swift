@@ -43,6 +43,21 @@ final class ReencodeOptionsTests: XCTestCase {
         XCTAssertEqual(value(after: "-b:a", in: args), "192k")
     }
 
+    func testOutputDurationAddsTimeLimitBeforeEncoderOptions() {
+        let args = ReencodeOptions().arguments(input: input, output: output, outputDuration: 17)
+        XCTAssertEqual(value(after: "-t", in: args), "17.000")
+        XCTAssertLessThan(args.firstIndex(of: "-t")!, args.firstIndex(of: "-c:v")!)
+        XCTAssertFalse(ReencodeOptions().arguments(input: input, output: output).contains("-t"))
+    }
+
+    func testTrimmedDurationRules() {
+        XCTAssertEqual(Reencoder.trimmedDuration(of: 60, trimEnd: 3), 57)
+        XCTAssertEqual(Reencoder.trimmedDuration(of: 60, trimEnd: 13), 47)
+        XCTAssertNil(Reencoder.trimmedDuration(of: 60, trimEnd: 0))
+        XCTAssertNil(Reencoder.trimmedDuration(of: nil, trimEnd: 8))
+        XCTAssertNil(Reencoder.trimmedDuration(of: 8.5, trimEnd: 8))
+    }
+
     func testResolutionNeverUpscales() {
         let args = ReencodeOptions(resolution: .p1080).arguments(input: input, output: output)
         XCTAssertEqual(value(after: "-vf", in: args), "scale=-2:'min(1080,ih)':flags=lanczos")

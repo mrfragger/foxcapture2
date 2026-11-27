@@ -43,7 +43,7 @@ struct SettingsView: View {
 
                     HStack {
                         Spacer()
-                        Button("Quit FoxCapture") {
+                        Button("Quit FoxCapture2") {
                             NSApp.terminate(nil)
                         }
                         .font(.system(size: 11))
@@ -245,9 +245,21 @@ struct SettingsView: View {
                 .font(.system(size: 12))
                 .toggleStyle(.checkbox)
             HStack(spacing: 8) {
-                Toggle("After \(Int(AppSettings.silenceSeconds)) seconds of silence:", isOn: $settings.pauseOnSilence)
+                Toggle("After", isOn: $settings.pauseOnSilence)
                     .font(.system(size: 12))
                     .toggleStyle(.checkbox)
+                Picker("", selection: $settings.silenceSeconds) {
+                    ForEach(AppSettings.silenceSecondsChoices, id: \.self) { seconds in
+                        Text("\(seconds) s").tag(seconds)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .font(.system(size: 11))
+                .frame(width: 70)
+                .disabled(!settings.pauseOnSilence)
+                Text("of silence:")
+                    .font(.system(size: 12))
                 Picker("", selection: $settings.silenceAction) {
                     Text("Pause").tag("pause")
                     Text("Stop").tag("stop")
@@ -258,7 +270,7 @@ struct SettingsView: View {
                 .frame(width: 80)
                 .disabled(!settings.pauseOnSilence)
             }
-            Text("With Remember on, Area skips the drag and shows your previous rectangle; use Reselect in the confirmation panel to pick a new one. Silence handling watches System Audio (so it needs that on). Pause waits for you to press Continue; Stop ends the recording and starts the re-encode if that is on, so a long unattended capture finishes by itself. Stop also ends a recording whose first \(Int(AppSettings.silenceSeconds)) seconds are silent.")
+            Text("With Remember on, Area skips the drag and shows your previous rectangle; use Reselect in the confirmation panel to pick a new one. Silence handling watches System Audio (so it needs that on). Pause waits for you to press Continue; Stop ends the recording and starts the re-encode if that is on, so a long unattended capture finishes by itself. Stop also ends a recording whose first \(settings.silenceSeconds) seconds are silent. When Stop ends a recording and re-encode is on, the silent tail is trimmed (\(Int(settings.silenceTrimSeconds)) s here) so only \(AppSettings.silenceKeptSeconds) seconds of silence remain.")
                 .font(.system(size: 10))
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -449,7 +461,7 @@ struct SettingsView: View {
                 }
             }
             .font(.system(size: 11))
-            Text("Screen recording needs FoxCapture enabled under Screen & System Audio Recording. Grant it once; it survives rebuilds.")
+            Text("Screen recording needs FoxCapture2 enabled under Screen & System Audio Recording. Grant it once; it survives rebuilds.")
                 .font(.system(size: 10))
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

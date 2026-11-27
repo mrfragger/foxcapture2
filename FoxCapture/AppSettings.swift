@@ -41,7 +41,19 @@ final class AppSettings: ObservableObject {
         get { RememberedArea.decode(UserDefaults.standard.data(forKey: "lastArea")) }
         set { UserDefaults.standard.set(newValue?.encoded(), forKey: "lastArea") }
     }
-    static let silenceSeconds: TimeInterval = 4
+    /// How long system audio must be silent before pause/stop kicks in.
+    @Published var silenceSeconds: Int {
+        didSet { UserDefaults.standard.set(silenceSeconds, forKey: "silenceSeconds") }
+    }
+    static let silenceSecondsChoices = [5, 10, 15]
+    /// Seconds of silence deliberately left at the end of an auto-stopped,
+    /// re-encoded recording.
+    static let silenceKeptSeconds = 2
+    /// Tail trimmed from a silence-stopped recording during re-encode, so
+    /// only `silenceKeptSeconds` of the silence remains.
+    var silenceTrimSeconds: TimeInterval {
+        TimeInterval(max(0, silenceSeconds - Self.silenceKeptSeconds))
+    }
 
     @Published var outputPath: String {
         didSet { UserDefaults.standard.set(outputPath, forKey: "outputPath") }
@@ -192,6 +204,7 @@ final class AppSettings: ObservableObject {
             "revealAfterRecording": true,
             "pauseOnSilence": false,
             "silenceAction": "pause",
+            "silenceSeconds": 5,
             "rememberLastArea": false,
             "outputPath": "",
             "resolution": "native",
@@ -226,6 +239,8 @@ final class AppSettings: ObservableObject {
         revealAfterRecording = defaults.bool(forKey: "revealAfterRecording")
         pauseOnSilence = defaults.bool(forKey: "pauseOnSilence")
         silenceAction = defaults.string(forKey: "silenceAction") ?? "pause"
+        let storedSilence = defaults.integer(forKey: "silenceSeconds")
+        silenceSeconds = Self.silenceSecondsChoices.contains(storedSilence) ? storedSilence : 5
         rememberLastArea = defaults.bool(forKey: "rememberLastArea")
         outputPath = defaults.string(forKey: "outputPath") ?? ""
         resolution = defaults.string(forKey: "resolution") ?? "native"

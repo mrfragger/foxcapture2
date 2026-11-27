@@ -92,7 +92,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     private static func icon(named symbolName: String, color: NSColor? = nil) -> NSImage? {
-        let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "FoxCapture")
+        let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "FoxCapture2")
         guard let color else {
             image?.isTemplate = true
             return image

@@ -30,7 +30,7 @@ struct MainView: View {
         HStack {
             Image(systemName: "rectangle.dashed.badge.record")
                 .font(.system(size: 13, weight: .semibold))
-            Text("FoxCapture")
+            Text("FoxCapture2")
                 .font(.system(size: 13, weight: .semibold))
             Spacer()
             Button(action: { isShowingSettings = true }) {
@@ -145,7 +145,7 @@ struct MainView: View {
                 HStack(spacing: 14) {
                     Toggle("Remember last area", isOn: $settings.rememberLastArea)
                     Toggle("On silence:", isOn: $settings.pauseOnSilence)
-                        .help("After \(Int(AppSettings.silenceSeconds)) seconds without system audio, pause or stop the recording")
+                        .help("After \(settings.silenceSeconds) seconds without system audio, pause or stop the recording")
                     Picker("", selection: $settings.silenceAction) {
                         Text("Pause").tag("pause")
                         Text("Stop").tag("stop")

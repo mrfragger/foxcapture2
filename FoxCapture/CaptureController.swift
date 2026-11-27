@@ -61,7 +61,10 @@ final class CaptureController: NSObject, ObservableObject {
     private var pendingFinalize: Task<Void, Never>?
 
     // Auto-pause on silence
-    private let silence = SilenceDetector(duration: AppSettings.silenceSeconds)
+    private let silence = SilenceDetector(duration: 5)
+    /// Seconds to cut from the end of the next re-encode; set only when
+    /// silence ended the recording, cleared when the session finishes.
+    private var pendingTrimSeconds: TimeInterval = 0
     private let audioQueue = DispatchQueue(label: "foxcapture.audio-level")
     private var silenceMonitoring = false
     private var wantsSilenceMonitoring: Bool { settings.pauseOnSilence && settings.systemAudio }
@@ -369,16 +372,18 @@ final class CaptureController: NSObject, ObservableObject {
     }
 
     /// Pauses or stops (per the "On silence" setting) after
-    /// `AppSettings.silenceSeconds` without system audio. Checked from the
+    /// `silenceSeconds` without system audio. Checked from the
     /// session timer, so it fires within about half a second of the threshold.
     /// Stopping lets a long, unattended capture go straight into the optional
     /// re-encode.
     private func autoPauseIfSilent() {
         guard state == .recording, silenceMonitoring, startedAt != nil else { return }
         guard silence.isSilent(at: ProcessInfo.processInfo.systemUptime) else { return }
-        let seconds = Int(AppSettings.silenceSeconds)
+        let seconds = settings.silenceSeconds
         if settings.silenceAction == "stop" {
             infoMessage = "Auto-stopped: no system audio for \(seconds) seconds."
+            // The silent tail is cut during re-encode, leaving 2 seconds.
+            pendingTrimSeconds = settings.silenceTrimSeconds
             stop()
         } else {
             pause()
@@ -406,6 +411,7 @@ final class CaptureController: NSObject, ObservableObject {
                     await MainActor.run {
                         self.startedAt = Date()
                         self.pauseReason = nil
+                        self.silence.setDuration(TimeInterval(self.settings.silenceSeconds))
                         self.silence.reset(at: ProcessInfo.processInfo.systemUptime)
                         self.silenceMonitoring = self.wantsSilenceMonitoring
                         self.state = .recording
@@ -515,6 +521,8 @@ final class CaptureController: NSObject, ObservableObject {
                 self.infoMessage = nil
                 self.elapsed = 0
                 self.pauseReason = nil
+                self.pendingTrimSeconds = 0
+                self.silence.setDuration(TimeInterval(self.settings.silenceSeconds))
                 self.silence.reset(at: ProcessInfo.processInfo.systemUptime)
                 self.silenceMonitoring = self.wantsSilenceMonitoring
                 self.state = .recording
@@ -583,11 +591,13 @@ final class CaptureController: NSObject, ObservableObject {
 
         let recorded = currentURL
         currentURL = nil
+        let trim = pendingTrimSeconds
+        pendingTrimSeconds = 0
         if let recorded, FileManager.default.fileExists(atPath: recorded.path),
            let options = settings.reencodeOptions {
             // Straight from .finishing to .encoding: never an idle gap in
             // which a new recording or the hotkey could sneak in.
-            beginReencode(of: recorded, options: options)
+            beginReencode(of: recorded, options: options, trimEnd: trim)
             return
         }
         state = .idle
@@ -606,7 +616,7 @@ final class CaptureController: NSObject, ObservableObject {
     /// Hands the finished recording to ffmpeg. Runs while `state == .encoding`,
     /// which blocks new recordings: x265 uses every core and would make the
     /// next capture drop frames.
-    private func beginReencode(of input: URL, options: ReencodeOptions) {
+    private func beginReencode(of input: URL, options: ReencodeOptions, trimEnd: TimeInterval = 0) {
         guard let ffmpeg = AppSettings.ffmpegURL else {
             state = .idle
             captures = store.list()
@@ -619,7 +629,8 @@ final class CaptureController: NSObject, ObservableObject {
             ffmpeg: ffmpeg,
             input: input,
             output: Reencoder.outputURL(for: input),
-            options: options
+            options: options,
+            trimEnd: trimEnd
         )
         reencoder = encoder
         encodeProgress = nil
@@ -859,7 +870,7 @@ final class CaptureController: NSObject, ObservableObject {
     private static func describe(_ error: Error) -> String {
         let ns = error as NSError
         if ns.domain == SCStreamErrorDomain {
-            return "Screen recording needs permission. Enable FoxCapture in System Settings → Privacy & Security → Screen & System Audio Recording, then relaunch."
+            return "Screen recording needs permission. Enable FoxCapture2 in System Settings → Privacy & Security → Screen & System Audio Recording, then relaunch."
         }
         return error.localizedDescription
     }

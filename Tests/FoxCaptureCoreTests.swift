@@ -142,6 +142,16 @@ final class SilenceDetectorTests: XCTestCase {
         XCTAssertTrue(detector.isSilent(at: 104))
     }
 
+    func testSetDurationChangesThreshold() {
+        let detector = SilenceDetector(duration: 5)
+        detector.reset(at: 100)
+        XCTAssertFalse(detector.isSilent(at: 104.9))
+        detector.setDuration(10)
+        XCTAssertFalse(detector.isSilent(at: 109.9))
+        XCTAssertTrue(detector.isSilent(at: 110))
+        XCTAssertEqual(detector.duration, 10)
+    }
+
     func testResetStartsAFreshCountdown() {
         let detector = SilenceDetector(duration: 4)
         detector.reset(at: 100)

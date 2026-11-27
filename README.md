@@ -33,9 +33,13 @@ This is a fork of the orginal [FoxCapture](https://github.com/libracoder/foxcapt
 
 - **Remember last area** (optional): Area reuses your previous rectangle —
   confirm it, or hit Reselect to drag a new one
-- **On silence: Pause or Stop** (optional): after 4 seconds without system
-  audio it pauses (press Continue to resume) or stops, so a long unattended
-  capture can finish and re-encode by itself
+- **On silence: Pause or Stop** (optional): after 5, 10 or 15 seconds
+  (your choice, default 5) without system audio it pauses (press Continue to
+  resume) or stops, so a long unattended capture can finish and re-encode by
+  itself. When it stops and CPU Re-encode is on, the silent tail is trimmed
+  during the re-encode so only 2 seconds of silence remain (3 s cut for 5 s,
+  8 s for 10 s, 13 s for 15 s). The original file is never modified, and
+  manual stops are not trimmed
 - **Menu bar control**: elapsed time in the bar; click the icon to stop
 - **History**: recent recordings in the popover with play / reveal / delete;
   files are plain timestamped mp4s in `~/Movies/FoxCapture` (configurable)
