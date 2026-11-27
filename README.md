@@ -8,6 +8,7 @@ Built on the same principles as [ClipboardFox](https://github.com/libracoder/cli
 
 This is a fork of the orginal FoxCapture [ClipboardFox](https://github.com/libracoder/foxcapture) adding additional features like remember last area, auto-pause on silence and fixing a few bugs.
 
+![](images/menu.jpg)
 
 ## Features
 
@@ -27,7 +28,9 @@ This is a fork of the orginal FoxCapture [ClipboardFox](https://github.com/libra
   "Move the original to the Trash afterwards". Recording is blocked while
   encoding so x265 can't make the next capture drop frames
 - **System audio and microphone** can be muxed into the video, both optional
-- 
+
+![](images/settings.jpg)
+
 - **Remember last area** (optional): Area reuses your previous rectangle —
   confirm it, or hit Reselect to drag a new one
 - **On silence: Pause or Stop** (optional): after 4 seconds without system
@@ -35,7 +38,7 @@ This is a fork of the orginal FoxCapture [ClipboardFox](https://github.com/libra
   capture can finish and re-encode by itself
 - **Menu bar control**: elapsed time in the bar; click the icon to stop
 - **History**: recent recordings in the popover with play / reveal / delete;
-  files are plain timestamped MP4s in `~/Movies/FoxCapture` (configurable)
+  files are plain timestamped mp4s in `~/Movies/FoxCapture` (configurable)
 
 ## Build
 
