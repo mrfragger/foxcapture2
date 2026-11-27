@@ -1,12 +1,12 @@
-# FoxCapture
+# FoxCapture2
 
 Screen recorder that lives in your macOS menu bar: drag to select an area, or
-grab the whole screen, and it records straight to MP4. Native SwiftUI, no
+grab the whole screen, and it records straight to mp4. Native SwiftUI, no
 Electron, no cloud. 
 
 Built on the same principles as [ClipboardFox](https://github.com/libracoder/clipboardfox) a plain Swift package, a tiny menu bar app, everything stays on your machine.
 
-This is a fork of the orginal [FoxCapture](https://github.com/libracoder/foxcapture) adding additional features like remember last area, auto-pause on silence and fixing a few bugs.
+This is a fork of the orginal [FoxCapture](https://github.com/libracoder/foxcapture) adding additional features like remember last area, auto-pause on silence, re-encode after stop and fixing a few bugs.
 
 ![](menu.jpg)
 
@@ -15,11 +15,11 @@ This is a fork of the orginal [FoxCapture](https://github.com/libracoder/foxcapt
 - **Area recording**: click Record Area, drag a rectangle on any screen,
   recording starts the moment you release — Esc cancels
 - **Full-screen recording**: records the screen your pointer is on
-- **Straight to MP4** via ScreenCaptureKit's recording output (H.264 or HEVC,
+- **Straight to mp4** via ScreenCaptureKit's recording output (H.264 or HEVC,
   30 or 60 fps) — by default there is no re-encoding step, the file is ready
   when you stop
 - **CPU Re-encode after stop** (optional, needs [ffmpeg](https://ffmpeg.org)):
-  shrinks the recording for a much faster YouTube upload. Pick the resolution
+  shrinks the recording for a much faster Youtube upload. Pick the resolution
   (original / 1080p / 720p, never upscaled), video codec (x265 / x264), CRF
   (28 smaller / 23 better / 18 best quality), audio codec (Opus / AAC) and audio bitrate
   (16k / 32k / 192k). The result is saved next to the original as
