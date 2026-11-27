@@ -6,9 +6,9 @@ Electron, no cloud.
 
 Built on the same principles as [ClipboardFox](https://github.com/libracoder/clipboardfox) a plain Swift package, a tiny menu bar app, everything stays on your machine.
 
-This is a fork of the orginal FoxCapture [ClipboardFox](https://github.com/libracoder/foxcapture) adding additional features like remember last area, auto-pause on silence and fixing a few bugs.
+This is a fork of the orginal [FoxCapture](https://github.com/libracoder/foxcapture) adding additional features like remember last area, auto-pause on silence and fixing a few bugs.
 
-![](images/menu.jpg)
+![](menu.jpg)
 
 ## Features
 
@@ -29,7 +29,7 @@ This is a fork of the orginal FoxCapture [ClipboardFox](https://github.com/libra
   encoding so x265 can't make the next capture drop frames
 - **System audio and microphone** can be muxed into the video, both optional
 
-![](images/settings.jpg)
+![](settings.jpg)
 
 - **Remember last area** (optional): Area reuses your previous rectangle —
   confirm it, or hit Reselect to drag a new one
