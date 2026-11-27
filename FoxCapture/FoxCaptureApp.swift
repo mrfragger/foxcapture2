@@ -1,0 +1,144 @@
+import SwiftUI
+import AppKit
+import Combine
+
+@main
+struct FoxCaptureApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
+    var body: some Scene {
+        Settings {
+            EmptyView()
+        }
+    }
+}
+
+class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
+    var statusItem: NSStatusItem!
+    var popover: NSPopover!
+    var controller: CaptureController!
+    var eventMonitor: Any?
+    private var cancellables: Set<AnyCancellable> = []
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.setActivationPolicy(.accessory)
+        controller = CaptureController()
+
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        if let button = statusItem.button {
+            button.image = Self.icon(named: "rectangle.dashed.badge.record")
+            button.imagePosition = .imageLeading
+            button.action = #selector(togglePopover)
+            button.target = self
+        }
+
+        popover = NSPopover()
+        popover.delegate = self
+        popover.contentSize = NSSize(width: 380, height: 500)
+        popover.behavior = .transient
+        popover.animates = true
+        popover.contentViewController = NSHostingController(
+            rootView: MainView(controller: controller)
+        )
+
+        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+            if let popover = self?.popover, popover.isShown {
+                popover.performClose(nil)
+            }
+        }
+
+        NotificationCenter.default.addObserver(
+            forName: .dismissPopover, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.popover.performClose(nil)
+        }
+
+        controller.$state
+            .combineLatest(controller.$elapsed, controller.$encodeProgress)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state, elapsed, encodeProgress in
+                self?.updateStatusItem(state: state, elapsed: elapsed, encodeProgress: encodeProgress)
+            }
+            .store(in: &cancellables)
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        controller.stopReencodeForQuit()
+    }
+
+    private func updateStatusItem(state: CaptureController.State, elapsed: TimeInterval, encodeProgress: Double?) {
+        guard let button = statusItem.button else { return }
+        switch state {
+        case .recording:
+            button.image = Self.icon(named: "record.circle.fill", color: .systemRed)
+            button.title = " " + Self.format(elapsed)
+        case .paused:
+            button.image = Self.icon(named: "pause.circle.fill", color: .systemOrange)
+            button.title = " " + Self.format(elapsed)
+        case .selecting, .confirming, .finishing:
+            button.image = Self.icon(named: "rectangle.dashed")
+            button.title = ""
+        case .encoding:
+            button.image = Self.icon(named: "gearshape.2.fill", color: .systemBlue)
+            if let encodeProgress {
+                button.title = " \(Int((encodeProgress * 100).rounded()))%"
+            } else {
+                button.title = " …"
+            }
+        case .idle:
+            button.image = Self.icon(named: "rectangle.dashed.badge.record")
+            button.title = ""
+        }
+    }
+
+    private static func icon(named symbolName: String, color: NSColor? = nil) -> NSImage? {
+        let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "FoxCapture")
+        guard let color else {
+            image?.isTemplate = true
+            return image
+        }
+        let configured = image?.withSymbolConfiguration(NSImage.SymbolConfiguration(paletteColors: [color]))
+        configured?.isTemplate = false
+        return configured
+    }
+
+    static func format(_ interval: TimeInterval) -> String {
+        let total = Int(interval)
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let seconds = total % 60
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+        }
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        // Dismissing the popover while an in-popover confirmation is pending
+        // cancels it; confirmed starts have already cleared pendingTitle.
+        if controller.state == .confirming, controller.pendingTitle != nil {
+            controller.cancelPending()
+        }
+    }
+
+    @objc func togglePopover() {
+        // While recording, the status item acts as the stop button; while
+        // choosing an area it cancels, so it can never be left stuck.
+        if controller.state == .recording {
+            controller.stop()
+            return
+        }
+        if controller.state == .selecting {
+            controller.cancelSelection()
+            return
+        }
+        guard let button = statusItem.button else { return }
+        if popover.isShown {
+            popover.performClose(nil)
+        } else {
+            controller.refresh()
+            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            popover.contentViewController?.view.window?.makeKey()
+        }
+    }
+}
